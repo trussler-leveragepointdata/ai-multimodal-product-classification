@@ -1,3 +1,5 @@
+from ast import literal_eval
+
 import pandas as pd
 import os
 import numpy as np
@@ -32,11 +34,17 @@ def process_embeddings(df, col_name):
     Example:
     df_processed = process_embeddings(df, 'embeddings')
     """
-    # Convert the values in the column to lists
-    df[col_name] = df[col_name].apply(eval)
+    # Convert serialized embeddings to flat numeric lists
+    df[col_name] = df[col_name].apply(
+        lambda value: np.asarray(
+            literal_eval(value) if isinstance(value, str) else value,
+            dtype=np.float32,
+        ).reshape(-1).tolist()
+    )
 
     # Extract values from lists and create new columns
-    embeddings_df = pd.DataFrame(df[col_name].to_list(), columns=[f"text_{i+1}" for i in range(df[col_name].str.len().max())])
+    embeddings_df = pd.DataFrame(df[col_name].to_list(), index=df.index)
+    embeddings_df.columns = [f"text_{i+1}" for i in range(embeddings_df.shape[1])]
     df = pd.concat([df, embeddings_df], axis=1)
 
     # Remove the original "embeddings" column
@@ -193,18 +201,24 @@ def train_test_split_and_feature_extraction(df, test_size=0.3, random_state=42):
     """
 
     # Split the data:
-    # TODO: Split the data into train and test sets setting using the test_size and random_state parameters
-    train_df, test_df = None, None
+    train_df, test_df = train_test_split(
+        df, test_size=test_size, random_state=random_state
+    )
 
     # Select features and labels vectors:
     # Features
-    # TODO: Select the name of the columns with the text embeddings and return it as a list (Even if there is only one column)
     # Make sure to select only the columns that are actually text embeddings, that means text_1, text_2, etc.
-    text_columns = [None]
-    # TODO: Select the name of the columns with the image embeddings and return it as a list (Even if there is only one column)
+    text_columns = [
+        column
+        for column in df.columns
+        if column.startswith("text_") and column[5:].isdigit()
+    ]
     # Make sure to select only the columns that are actually image embeddings, that means image_1, image_2, etc.
-    image_columns = [None]
-    # TODO: Select the name of the column with the class labels and return it as a list (Even if there is only one column)
-    label_columns = [None]
+    image_columns = [
+        column
+        for column in df.columns
+        if column.startswith("image_") and column[6:].isdigit()
+    ]
+    label_columns = [column for column in df.columns if column == "class_id"]
 
     return train_df, test_df, text_columns, image_columns, label_columns
