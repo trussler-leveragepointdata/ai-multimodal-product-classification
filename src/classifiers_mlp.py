@@ -377,6 +377,11 @@ def train_mlp(train_loader, test_loader, text_input_size, image_input_size, outp
 
     model.compile(optimizer=optimizer, loss=loss, metrics=["accuracy"])
 
+    # TensorFlow on Apple Silicon may replace v2 optimizers with legacy
+    # implementations during compilation. Preserve the requested optimizer so
+    # the model exposes (and trains with) the selected public optimizer class.
+    model.optimizer = optimizer
+
     early_stopping = EarlyStopping(
         monitor="val_loss", patience=patience, restore_best_weights=True
     )

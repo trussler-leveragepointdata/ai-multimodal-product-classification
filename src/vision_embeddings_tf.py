@@ -108,12 +108,9 @@ class FoundationalCVModel:
                 weights='imagenet', include_top=False, input_tensor=input_layer
             )
         elif backbone == 'convnextv2_tiny':
-            self.base_model = ConvNeXtTiny(
-                weights='imagenet',
-                include_top=False,
-                input_tensor=input_layer
+            self.base_model = TFConvNextV2Model.from_pretrained(
+                'facebook/convnextv2-tiny-1k-224'
             )
-
         elif backbone == 'convnextv2_base':
             self.base_model = TFConvNextV2Model.from_pretrained(
                 'facebook/convnextv2-base-1k-224'
@@ -151,7 +148,7 @@ class FoundationalCVModel:
         # Aditionally, the output of the model is different in both cases, we need to get the pooling of the output layer.
         
         # If is a model from transformers:
-        if backbone in ['vit_base', 'vit_large', 'convnextv2_base', 'convnextv2_large', 'swin_tiny', 'swin_small', 'swin_base']:
+        if backbone in ['vit_base', 'vit_large', 'convnextv2_tiny', 'convnextv2_base', 'convnextv2_large', 'swin_tiny', 'swin_small', 'swin_base']:
             input_layer_transposed = tf.transpose(input_layer, perm=[0, 3, 1, 2])
             outputs = self.base_model(input_layer_transposed).pooler_output
         # If is a model from keras.applications:
