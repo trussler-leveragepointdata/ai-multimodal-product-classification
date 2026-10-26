@@ -11,15 +11,25 @@ from tensorflow.keras.losses import CategoricalCrossentropy
 from tensorflow.keras.callbacks import EarlyStopping
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve
+from sklearn.metrics import (
+    confusion_matrix,
+    classification_report,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    roc_curve,
+)
 from itertools import cycle
 from sklearn.preprocessing import LabelEncoder
+
 
 # Custom Dataset class for Keras
 class MultimodalDataset(Sequence):
     """
     Custom Keras Dataset class for multimodal data handling, designed for models that
-    take both text and image data as inputs. It facilitates batching and shuffling 
+    take both text and image data as inputs. It facilitates batching and shuffling
     of data for efficient training in Keras models.
 
     This class supports loading and batching multimodal data (text and images), as well as handling
@@ -32,7 +42,7 @@ class MultimodalDataset(Sequence):
         text_cols (list): List of column names corresponding to text data. Can be a single column or multiple columns.
         image_cols (list): List of column names corresponding to image data (usually file paths or image pixel data).
         label_col (str): Column name corresponding to the target labels.
-        encoder (LabelEncoder, optional): A pre-fitted LabelEncoder instance for encoding the labels. 
+        encoder (LabelEncoder, optional): A pre-fitted LabelEncoder instance for encoding the labels.
                                           If None, a new LabelEncoder is fitted based on the provided data.
         batch_size (int, optional): Number of samples per batch. Default is 32.
         shuffle (bool, optional): Whether to shuffle the dataset at the end of each epoch. Default is True.
@@ -50,7 +60,7 @@ class MultimodalDataset(Sequence):
     -------
     __len__():
         Returns the number of batches per epoch based on the dataset size and batch size.
-    
+
     __getitem__(idx):
         Retrieves a single batch of data, including both text and image inputs and the corresponding labels.
         The method returns a tuple in the format ({'text': text_batch, 'image': image_batch}, label_batch),
@@ -60,7 +70,16 @@ class MultimodalDataset(Sequence):
         Updates the index order after each epoch, shuffling if needed.
     """
 
-    def __init__(self, df, text_cols, image_cols, label_col, encoder=None, batch_size=32, shuffle=True):
+    def __init__(
+        self,
+        df,
+        text_cols,
+        image_cols,
+        label_col,
+        encoder=None,
+        batch_size=32,
+        shuffle=True,
+    ):
         """
         Initializes the MultimodalDataset object.
 
@@ -81,16 +100,18 @@ class MultimodalDataset(Sequence):
         else:
             # Else, set text data to None
             self.text_data = None
-            
+
         if image_cols:
             self.image_data = df[image_cols].to_numpy(copy=False)
         else:
             # Else, set image data to None
             self.image_data = None
-            
+
         if not text_cols and not image_cols:
-            raise ValueError("At least one of text_cols or image_cols must be provided.")
-        
+            raise ValueError(
+                "At least one of text_cols or image_cols must be provided."
+            )
+
         self.labels = df[label_col].to_numpy(copy=False)
 
         # Use provided encoder or fit a new one
@@ -100,11 +121,11 @@ class MultimodalDataset(Sequence):
         else:
             self.encoder = encoder
             self.labels = self.encoder.transform(self.labels)
-        
+
         # One-hot encode labels for multi-class classification
         num_classes = len(self.encoder.classes_)
         self.labels = np.eye(num_classes)[self.labels]
-        
+
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.on_epoch_end()
@@ -123,55 +144,58 @@ class MultimodalDataset(Sequence):
     def __getitem__(self, idx):
         """
         Retrieves a single batch of data (text and/or image) and the corresponding labels.
-        
+
         Args:
             idx (int): Index of the batch to retrieve.
-        
+
         Returns:
         -------
         tuple:
-            A tuple containing the batch of text and/or image inputs and the corresponding labels. 
+            A tuple containing the batch of text and/or image inputs and the corresponding labels.
             The input data is returned as a dictionary with keys 'text' and 'image', depending on the provided columns.
             If no text or image columns were provided, only the other is returned.
         """
-        indices = self.indices[idx * self.batch_size:(idx + 1) * self.batch_size]
-        
+        indices = self.indices[idx * self.batch_size : (idx + 1) * self.batch_size]
+
         if self.text_data is not None:
             text_batch = self.text_data[indices]
         if self.image_data is not None:
             image_batch = self.image_data[indices]
         label_batch = self.labels[indices]
-        
+
         if self.text_data is None:
-            return {'image': image_batch}, label_batch
+            return {"image": image_batch}, label_batch
         if self.image_data is None:
-            return {'text': text_batch}, label_batch
+            return {"text": text_batch}, label_batch
         else:
-            return {'text': text_batch, 'image': image_batch}, label_batch
+            return {"text": text_batch, "image": image_batch}, label_batch
 
     def on_epoch_end(self):
         """
         Updates the index order after each epoch, shuffling the data if needed.
-        
+
         This method is called at the end of each epoch and will shuffle the data if the `shuffle` flag is set to True.
         """
         self.indices = np.arange(len(self.labels))
         if self.shuffle:
             np.random.shuffle(self.indices)
 
+
 # Early Fusion Model
-def create_early_fusion_model(text_input_size, image_input_size, output_size, hidden=[128], p=0.2):
+def create_early_fusion_model(
+    text_input_size, image_input_size, output_size, hidden=[128], p=0.2
+):
     """
-    Creates a multimodal early fusion model combining text and image inputs. The model concatenates the text and 
-    image features, passes them through fully connected layers with optional dropout and batch normalization, 
+    Creates a multimodal early fusion model combining text and image inputs. The model concatenates the text and
+    image features, passes them through fully connected layers with optional dropout and batch normalization,
     and produces a multi-class classification output.
 
     Args:
         text_input_size (int): Size of the input vector for the text data.
         image_input_size (int): Size of the input vector for the image data.
         output_size (int): Number of classes for the output layer (i.e., size of the softmax output).
-        hidden (int or list, optional): Specifies the number of hidden units in the dense layers. 
-                                        If an integer, a single dense layer with the specified units is created. 
+        hidden (int or list, optional): Specifies the number of hidden units in the dense layers.
+                                        If an integer, a single dense layer with the specified units is created.
                                         If a list, multiple dense layers are created with the respective units. Default is [128].
         p (float, optional): Dropout rate to apply after each dense layer. Default is 0.2.
 
@@ -188,17 +212,17 @@ def create_early_fusion_model(text_input_size, image_input_size, output_size, hi
         model = create_early_fusion_model(text_input_size=300, image_input_size=2048, output_size=10, hidden=[128, 64], p=0.3)
         model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     """
-    
-    
+
     if text_input_size is None and image_input_size is None:
-        raise ValueError("At least one of text_input_size and image_input_size must be provided.")
-    
+        raise ValueError(
+            "At least one of text_input_size and image_input_size must be provided."
+        )
+
     if text_input_size is not None:
         text_input = Input(shape=(text_input_size,), name="text")
     if image_input_size is not None:
         image_input = Input(shape=(image_input_size,), name="image")
-    
-    
+
     if text_input_size is not None and image_input_size is not None:
         x = Concatenate()([text_input, image_input])
     elif text_input_size is not None:
@@ -225,13 +249,16 @@ def create_early_fusion_model(text_input_size, image_input_size, output_size, hi
     elif image_input_size is not None:
         model = Model(inputs=image_input, outputs=output)
     else:
-        raise ValueError("At least one of text_input_size and image_input_size must be provided.")
-    
+        raise ValueError(
+            "At least one of text_input_size and image_input_size must be provided."
+        )
+
     return model
+
 
 def test_model(y_test, y_pred, y_prob=None, encoder=None):
     """
-    Evaluates a trained model's performance using various metrics such as accuracy, precision, recall, F1-score, 
+    Evaluates a trained model's performance using various metrics such as accuracy, precision, recall, F1-score,
     and visualizations including a confusion matrix and ROC curves.
 
     Args:
@@ -263,29 +290,28 @@ def test_model(y_test, y_pred, y_prob=None, encoder=None):
     y_test_binarized = y_test
     y_test = encoder.inverse_transform(np.argmax(y_test, axis=1))
     y_pred = encoder.inverse_transform(y_pred)
-    
 
     cm = confusion_matrix(y_test, y_pred)
     fig, ax = plt.subplots(figsize=(15, 15))
-    sns.heatmap(cm, annot=True, cmap='Blues', fmt='g', ax=ax)
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Confusion Matrix')
+    sns.heatmap(cm, annot=True, cmap="Blues", fmt="g", ax=ax)
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion Matrix")
     plt.show()
 
     if y_prob is not None:
         fig, ax = plt.subplots(figsize=(15, 15))
-        
+
         colors = cycle(["aqua", "darkorange", "cornflowerblue"])
 
         for i, color in zip(range(y_prob.shape[1]), colors):
             fpr, tpr, _ = roc_curve(y_test_binarized[:, i], y_prob[:, i])
-            ax.plot(fpr, tpr, color=color, lw=2, label=f'Class {i}')
+            ax.plot(fpr, tpr, color=color, lw=2, label=f"Class {i}")
 
         ax.plot([0, 1], [0, 1], "k--")
-        plt.title('ROC Curve')
-        plt.ylabel('True Positive Rate')
-        plt.xlabel('False Positive Rate')
+        plt.title("ROC Curve")
+        plt.ylabel("True Positive Rate")
+        plt.xlabel("False Positive Rate")
         plt.legend()
         plt.show()
 
@@ -293,20 +319,36 @@ def test_model(y_test, y_pred, y_prob=None, encoder=None):
     print(cr)
 
     accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, average='weighted')
-    recall = recall_score(y_test, y_pred, average='weighted')
-    f1 = f1_score(y_test, y_pred, average='weighted')
+    precision = precision_score(y_test, y_pred, average="weighted")
+    recall = recall_score(y_test, y_pred, average="weighted")
+    f1 = f1_score(y_test, y_pred, average="weighted")
 
     return accuracy, precision, recall, f1
 
 
-    
-def train_mlp(train_loader, test_loader, text_input_size, image_input_size, output_size, num_epochs=50, report=False, lr=0.001, set_weights=True, adam=False, p=0.0, seed=1, patience=40, save_results=True, train_model=True, test_mlp_model=True):
+def train_mlp(
+    train_loader,
+    test_loader,
+    text_input_size,
+    image_input_size,
+    output_size,
+    num_epochs=50,
+    report=False,
+    lr=0.001,
+    set_weights=True,
+    adam=False,
+    p=0.0,
+    seed=1,
+    patience=40,
+    save_results=True,
+    train_model=True,
+    test_mlp_model=True,
+):
     """
     Trains a multimodal early fusion model using both text and image data.
 
     The function handles the training process of the model by combining text and image features,
-    computes class weights if needed, applies an optimizer (SGD or Adam), and implements early stopping 
+    computes class weights if needed, applies an optimizer (SGD or Adam), and implements early stopping
     to prevent overfitting. The model is evaluated on the test set, and key performance metrics are computed.
 
     Args:
@@ -346,11 +388,11 @@ def train_mlp(train_loader, test_loader, text_input_size, image_input_size, outp
         - `train_loader` and `test_loader` should be instances of `MultimodalDataset` or compatible Keras data loaders.
         - If the dataset is imbalanced, setting `set_weights=True` is recommended to ensure better model performance on minority classes.
     """
-    
+
     if seed is not None:
         np.random.seed(seed)
         tf.random.set_seed(seed)
-      
+
     # Create an instance of the early fusion model
     model = create_early_fusion_model(
         text_input_size, image_input_size, output_size, p=p
@@ -401,10 +443,10 @@ def train_mlp(train_loader, test_loader, text_input_size, image_input_size, outp
         for batch in test_loader:
             features, labels = batch
             if len(features) == 1:
-                text = features['text'] if 'text' in features else features['image']
+                text = features["text"] if "text" in features else features["image"]
                 preds = model.predict(text)
             else:
-                text, image = features['text'], features['image']
+                text, image = features["text"], features["image"]
                 preds = model.predict([text, image])
             y_true.extend(labels)
             y_pred.extend(np.argmax(preds, axis=1))
@@ -413,35 +455,37 @@ def train_mlp(train_loader, test_loader, text_input_size, image_input_size, outp
         y_true, y_pred, y_prob = np.array(y_true), np.array(y_pred), np.array(y_prob)
 
         test_accuracy = accuracy_score(np.argmax(y_true, axis=1), y_pred)
-        f1 = f1_score(np.argmax(y_true, axis=1), y_pred, average='macro')
-        
-        auc_scores = roc_auc_score(y_true, y_prob, average='macro', multi_class='ovr')
+        f1 = f1_score(np.argmax(y_true, axis=1), y_pred, average="macro")
+
+        auc_scores = roc_auc_score(y_true, y_prob, average="macro", multi_class="ovr")
         macro_auc = auc_scores
 
-        plt.plot(history.history['accuracy'], label='Train Accuracy')
-        plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
+        plt.plot(history.history["accuracy"], label="Train Accuracy")
+        plt.plot(history.history["val_accuracy"], label="Validation Accuracy")
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy")
         plt.legend()
         plt.show()
 
         if report:
             test_model(y_true, y_pred, y_prob, encoder=train_loader.encoder)
-        
+
         # Store results in a dataframe and save in the results folder
         if text_input_size is not None and image_input_size is not None:
-            model_type = 'multimodal'
+            model_type = "multimodal"
         elif text_input_size is not None:
-            model_type = 'text'
+            model_type = "text"
         elif image_input_size is not None:
-            model_type = 'image'
-        
+            model_type = "image"
+
         if save_results:
-            results = pd.DataFrame({'Predictions': y_pred, 'True Labels': np.argmax(y_true, axis=1)})
+            results = pd.DataFrame(
+                {"Predictions": y_pred, "True Labels": np.argmax(y_true, axis=1)}
+            )
             # create results folder if it does not exist
-            os.makedirs('results', exist_ok=True)
+            os.makedirs("results", exist_ok=True)
             results.to_csv(f"results/{model_type}_results.csv", index=False)
     else:
         test_accuracy, f1, macro_auc = None, None, None
-        
+
     return model, test_accuracy, f1, macro_auc

@@ -1,4 +1,5 @@
 """ Evaluate Medical Tests Classification in LLMS """
+
 ## Setup
 #### Load the API key and libaries.
 import os
@@ -9,15 +10,16 @@ import numpy as np
 from transformers import AutoTokenizer, AutoModel
 import torch
 
+
 # Create a class to handle the GPT API
 class GPT:
     """
-    A class to interact with the OpenAI GPT API for generating text embeddings from a given dataset. 
+    A class to interact with the OpenAI GPT API for generating text embeddings from a given dataset.
     This class provides methods to retrieve embeddings for text data and save them to a CSV file.
 
     Args:
         path (str, optional): The path to the CSV file containing the text data. Default is 'data/file.csv'.
-        embedding_model (str, optional): The embedding model to use for generating text embeddings. 
+        embedding_model (str, optional): The embedding model to use for generating text embeddings.
                                          Default is 'text-embedding-3-small'.
 
     Attributes:
@@ -29,7 +31,7 @@ class GPT:
             Generates and returns the embedding vector for the given text using the OpenAI API.
 
         get_embedding_df(column, directory, file):
-            Reads a CSV file, computes the embeddings for a specified text column, and saves the embeddings 
+            Reads a CSV file, computes the embeddings for a specified text column, and saves the embeddings
             to a new CSV file in the specified directory.
 
     Example:
@@ -41,17 +43,19 @@ class GPT:
         - The OpenAI API key must be stored in a `.env` file with the variable name `OPENAI_API_KEY`.
         - The OpenAI Python package should be installed (`pip install openai`), and an active OpenAI API key is required.
     """
-    def __init__(self, path='data/file.csv', embedding_model='text-embedding-3-small'):
+
+    def __init__(self, path="data/file.csv", embedding_model="text-embedding-3-small"):
         """
         Initializes the GPT class with the provided CSV file path and embedding model.
 
         Args:
             path (str, optional): The path to the CSV file containing the text data. Default is 'data/file.csv'.
-            embedding_model (str, optional): The embedding model to use for generating text embeddings. 
+            embedding_model (str, optional): The embedding model to use for generating text embeddings.
                                              Default is 'text-embedding-3-small'.
         """
         import openai
         from dotenv import load_dotenv, find_dotenv
+
         load_dotenv(find_dotenv())
         openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -69,14 +73,19 @@ class GPT:
             list: A list containing the embedding vector for the input text.
         """
         from openai import OpenAI
+
         client = OpenAI()
-        
+
         text = text.replace("\n", " ")
-        
-        return client.embeddings.create(
-            input=text,
-            model=self.embedding_model,
-        ).data[0].embedding
+
+        return (
+            client.embeddings.create(
+                input=text,
+                model=self.embedding_model,
+            )
+            .data[0]
+            .embedding
+        )
 
     def get_embedding_df(self, column, directory, file):
         """
@@ -94,7 +103,7 @@ class GPT:
         df = pd.read_csv(self.path)
         df["embeddings"] = df[column].map(self.get_embedding)
 
-        os.makedirs(directory, exist_ok=True) 
+        os.makedirs(directory, exist_ok=True)
         df.to_csv(os.path.join(directory, file), index=False)
 
 
@@ -102,15 +111,15 @@ class GPT:
 class HuggingFaceEmbeddings:
     """
     A class to handle text embedding generation using a Hugging Face pre-trained transformer model.
-    This class loads the model, tokenizes the input text, generates embeddings, and provides an option 
+    This class loads the model, tokenizes the input text, generates embeddings, and provides an option
     to save the embeddings to a CSV file.
 
     Args:
-        model_name (str, optional): The name of the Hugging Face pre-trained model to use for generating embeddings. 
+        model_name (str, optional): The name of the Hugging Face pre-trained model to use for generating embeddings.
                                     Default is 'sentence-transformers/all-MiniLM-L6-v2'.
         path (str, optional): The path to the CSV file containing the text data. Default is 'data/file.csv'.
         save_path (str, optional): The directory path where the embeddings will be saved. Default is 'Models'.
-        device (str, optional): The device to run the model on ('cpu' or 'cuda'). If None, it will automatically detect 
+        device (str, optional): The device to run the model on ('cpu' or 'cuda'). If None, it will automatically detect
                                 a GPU if available; otherwise, it defaults to CPU.
 
     Attributes:
@@ -126,11 +135,11 @@ class HuggingFaceEmbeddings:
             Generates embeddings for a given text input using the pre-trained model.
 
         get_embedding_df(column, directory, file):
-            Reads a CSV file, computes embeddings for a specified text column, and saves the resulting DataFrame 
+            Reads a CSV file, computes embeddings for a specified text column, and saves the resulting DataFrame
             with embeddings to a new CSV file in the specified directory.
 
     Example:
-        embedding_instance = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2', 
+        embedding_instance = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2',
                                                    path='data/products.csv', save_path='output')
         text_embedding = embedding_instance.get_embedding("Sample product description.")
         embedding_instance.get_embedding_df(column='description', directory='output', file='product_embeddings.csv')
@@ -140,8 +149,14 @@ class HuggingFaceEmbeddings:
         - The function supports large models and can run on either GPU or CPU, depending on device availability.
         - The input text will be truncated and padded to a maximum length of 512 tokens to fit into the model.
     """
-    
-    def __init__(self, model_name='sentence-transformers/all-MiniLM-L6-v2', path='data/file.csv', save_path=None, device=None):
+
+    def __init__(
+        self,
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        path="data/file.csv",
+        save_path=None,
+        device=None,
+    ):
         """
         Initializes the HuggingFaceEmbeddings class with the specified model and paths.
 
@@ -155,22 +170,22 @@ class HuggingFaceEmbeddings:
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.model = AutoModel.from_pretrained(self.model_name)
         self.path = path
-        self.save_path = save_path or 'Models'
-        
+        self.save_path = save_path or "Models"
+
         # Define device
         if device is None:
             # Note: If you have a mac, you may want to change 'cupa' to 'mps' to use GPU
             # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            self.device = torch.device('mps')
+            self.device = torch.device("mps")
         else:
             self.device = torch.device(device)
         print(f"Using device: {self.device}")
-        
+
         # Move model to the specified device
         self.model.to(self.device)
         print(f"Model moved to device: {self.device}")
         print(f"Model: {model_name}")
-        
+
     def get_embedding(self, text):
         """
         Generates embeddings for a given text using the Hugging Face model.
@@ -187,22 +202,21 @@ class HuggingFaceEmbeddings:
             truncation=True,
             max_length=512,
         )
-        
+
         # Move the inputs to the device
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
-        
+
         with torch.no_grad():
             outputs = self.model(**inputs)
-        
+
         embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
-        
+
         return embeddings.squeeze(0)
 
     def get_embedding_df(self, column, directory, file):
         # Load the CSV file
         df = pd.read_csv(self.path)
         df["embeddings"] = [self.get_embedding(text).tolist() for text in df[column]]
-        
+
         os.makedirs(directory, exist_ok=True)
         df.to_csv(os.path.join(directory, file), index=False)
-        

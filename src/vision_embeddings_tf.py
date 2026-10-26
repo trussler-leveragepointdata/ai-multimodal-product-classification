@@ -3,7 +3,12 @@ import pandas as pd
 import os
 from transformers import TFConvNextV2Model, TFViTModel, TFSwinModel
 from tensorflow.keras.applications import (
-    ResNet50, ResNet101, DenseNet121, DenseNet169, InceptionV3, ConvNeXtTiny
+    ResNet50,
+    ResNet101,
+    DenseNet121,
+    DenseNet169,
+    InceptionV3,
+    ConvNeXtTiny,
 )
 from tensorflow.keras.layers import Input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -13,18 +18,20 @@ import tensorflow as tf
 from PIL import Image
 
 import warnings
+
 warnings.filterwarnings("ignore")
 # Suppress TensorFlow warnings
-tf.get_logger().setLevel('ERROR')
+tf.get_logger().setLevel("ERROR")
+
 
 def load_and_preprocess_image(image_path, target_size=(224, 224)):
     """
     Load and preprocess an image.
-    
+
     Args:
     - image_path (str): Path to the image file.
     - target_size (tuple): Desired image size.
-    
+
     Returns:
     - np.array: Preprocessed image.
     """
@@ -48,7 +55,7 @@ class FoundationalCVModel:
         The name of the foundational CV model to load (e.g., 'resnet50', 'vit_base').
     model : keras.Model
         The compiled Keras model with the selected backbone.
-    
+
     Parameters:
     ----------
     backbone : str
@@ -59,7 +66,7 @@ class FoundationalCVModel:
         - ConvNextV2 variants: 'convnextv2_tiny', 'convnextv2_base', 'convnextv2_large'
         - Swin Transformer variants: 'swin_tiny', 'swin_small', 'swin_base'
         - Vision Transformer (ViT) variants: 'vit_base', 'vit_large'
-    
+
     mode : str, optional
         The mode of the model, either 'eval' for evaluation or 'fine_tune' for fine-tuning. Default is 'eval'.
 
@@ -67,96 +74,104 @@ class FoundationalCVModel:
     -------
     __init__(self, backbone, mode='eval'):
         Initializes the model with the specified backbone and mode.
-    
+
     predict(self, images):
         Given a batch of images, performs a forward pass through the model and returns predictions.
         Parameters:
         ----------
         images : numpy.ndarray
             A batch of images to perform prediction on, with shape (batch_size, 224, 224, 3).
-        
+
         Returns:
         -------
         numpy.ndarray
             Model predictions or extracted features for the provided images.
     """
-    
-    def __init__(self, backbone, mode='eval', input_shape=(224, 224, 3)):
+
+    def __init__(self, backbone, mode="eval", input_shape=(224, 224, 3)):
         self.backbone_name = backbone
-        
+
         # Select the backbone from the possible foundational models
         input_layer = Input(shape=input_shape)
-        
-        if backbone == 'resnet50':
+
+        if backbone == "resnet50":
             self.base_model = ResNet50(
-                weights='imagenet', include_top=False, input_tensor=input_layer
+                weights="imagenet", include_top=False, input_tensor=input_layer
             )
-        elif backbone == 'resnet101':
+        elif backbone == "resnet101":
             self.base_model = ResNet101(
-                weights='imagenet', include_top=False, input_tensor=input_layer
+                weights="imagenet", include_top=False, input_tensor=input_layer
             )
-        elif backbone == 'densenet121':
+        elif backbone == "densenet121":
             self.base_model = DenseNet121(
-                weights='imagenet', include_top=False, input_tensor=input_layer
+                weights="imagenet", include_top=False, input_tensor=input_layer
             )
-        elif backbone == 'densenet169':
+        elif backbone == "densenet169":
             self.base_model = DenseNet169(
-                weights='imagenet', include_top=False, input_tensor=input_layer
+                weights="imagenet", include_top=False, input_tensor=input_layer
             )
-        elif backbone == 'inception_v3':
+        elif backbone == "inception_v3":
             self.base_model = InceptionV3(
-                weights='imagenet', include_top=False, input_tensor=input_layer
+                weights="imagenet", include_top=False, input_tensor=input_layer
             )
-        elif backbone == 'convnextv2_tiny':
+        elif backbone == "convnextv2_tiny":
             self.base_model = TFConvNextV2Model.from_pretrained(
-                'facebook/convnextv2-tiny-1k-224'
+                "facebook/convnextv2-tiny-1k-224"
             )
-        elif backbone == 'convnextv2_base':
+        elif backbone == "convnextv2_base":
             self.base_model = TFConvNextV2Model.from_pretrained(
-                'facebook/convnextv2-base-1k-224'
+                "facebook/convnextv2-base-1k-224"
             )
-        elif backbone == 'convnextv2_large':
+        elif backbone == "convnextv2_large":
             self.base_model = TFConvNextV2Model.from_pretrained(
-                'facebook/convnextv2-large-1k-224'
+                "facebook/convnextv2-large-1k-224"
             )
-        elif backbone == 'swin_tiny':
+        elif backbone == "swin_tiny":
             self.base_model = TFSwinModel.from_pretrained(
-                'microsoft/swin-tiny-patch4-window7-224'
+                "microsoft/swin-tiny-patch4-window7-224"
             )
-        elif backbone == 'swin_small':
+        elif backbone == "swin_small":
             self.base_model = TFSwinModel.from_pretrained(
-                'microsoft/swin-small-patch4-window7-224'
+                "microsoft/swin-small-patch4-window7-224"
             )
-        elif backbone == 'swin_base':
+        elif backbone == "swin_base":
             self.base_model = TFSwinModel.from_pretrained(
-                'microsoft/swin-base-patch4-window7-224'
+                "microsoft/swin-base-patch4-window7-224"
             )
-        elif backbone in ['vit_base', 'vit_large']:
+        elif backbone in ["vit_base", "vit_large"]:
             backbone_path = {
-                'vit_base': 'google/vit-base-patch16-224-in21k',
-                'vit_large': 'google/vit-large-patch16-224-in21k',
+                "vit_base": "google/vit-base-patch16-224-in21k",
+                "vit_large": "google/vit-large-patch16-224-in21k",
             }
             self.base_model = TFViTModel.from_pretrained(backbone_path[backbone])
         else:
             raise ValueError(f"Unsupported backbone model: {backbone}")
 
-        
-        if mode == 'eval':
+        if mode == "eval":
             self.base_model.trainable = False
-        
+
         # Take into account the model's input requirements. In models from transformers, the input is channels first, but in models from keras.applications, the input is channels last.
         # Aditionally, the output of the model is different in both cases, we need to get the pooling of the output layer.
-        
+
         # If is a model from transformers:
-        if backbone in ['vit_base', 'vit_large', 'convnextv2_tiny', 'convnextv2_base', 'convnextv2_large', 'swin_tiny', 'swin_small', 'swin_base']:
+        if backbone in [
+            "vit_base",
+            "vit_large",
+            "convnextv2_tiny",
+            "convnextv2_base",
+            "convnextv2_large",
+            "swin_tiny",
+            "swin_small",
+            "swin_base",
+        ]:
             input_layer_transposed = tf.transpose(input_layer, perm=[0, 3, 1, 2])
             outputs = self.base_model(input_layer_transposed).pooler_output
         # If is a model from keras.applications:
         else:
             outputs = GlobalAveragePooling2D()(self.base_model.output)
-        
+
         self.model = Model(inputs=input_layer, outputs=outputs)
-        
+
     def get_output_shape(self):
         """
         Get the output shape of the model.
@@ -167,7 +182,7 @@ class FoundationalCVModel:
             The shape of the model's output tensor.
         """
         return self.model.output_shape
-    
+
     def predict(self, images):
         """
         Predict on a batch of images.
@@ -181,16 +196,15 @@ class FoundationalCVModel:
         -------
         numpy.ndarray
             Predictions or features from the model for the given images.
-        """    
+        """
         return self.model.predict(images, verbose=0)
-
 
 
 class ImageFolderDataset:
     """
     A custom dataset class for loading and preprocessing images from a folder.
 
-    This class helps in loading images from a given folder, automatically filtering valid image files and 
+    This class helps in loading images from a given folder, automatically filtering valid image files and
     preprocessing them to a specified shape. It also handles any unreadable or corrupted images by excluding them.
 
     Attributes:
@@ -217,18 +231,19 @@ class ImageFolderDataset:
     clean_unidentified_images():
         Cleans the dataset by removing images that cause an `UnidentifiedImageError` during loading. This helps ensure
         that only valid, readable images are kept in the dataset.
-    
+
     __len__():
         Returns the number of valid images in the dataset after cleaning.
 
     __getitem__(idx):
-        Given an index `idx`, retrieves the image file at that index, loads and preprocesses it, and returns the image 
+        Given an index `idx`, retrieves the image file at that index, loads and preprocesses it, and returns the image
         along with its filename.
-    
+
     """
+
     def __init__(self, folder_path, shape=(224, 224), image_files=None):
         """
-        Initializes the dataset object by setting the folder path and target image shape. 
+        Initializes the dataset object by setting the folder path and target image shape.
         It also optionally accepts a list of image files to be processed, otherwise detects valid images in the folder.
 
         Parameters:
@@ -242,21 +257,25 @@ class ImageFolderDataset:
         """
         self.folder_path = folder_path
         self.shape = shape
-        
+
         # If image files are provided, use them; otherwise, detect image files in the folder
         if image_files:
             self.image_files = image_files
         else:
             # List all files in the folder and filter only image files
-            self.image_files = [f for f in os.listdir(folder_path) if f.lower().endswith(('jpg', 'jpeg', 'png', 'gif'))]
-        
+            self.image_files = [
+                f
+                for f in os.listdir(folder_path)
+                if f.lower().endswith(("jpg", "jpeg", "png", "gif"))
+            ]
+
         # Clean the dataset by removing images that cause errors during loading
         self.clean_unidentified_images()
-        
+
     def clean_unidentified_images(self):
         """
         Clean the dataset by removing images that cannot be opened due to errors (e.g., `UnidentifiedImageError`).
-        
+
         This method iterates over the list of detected image files and attempts to open and convert each image to RGB.
         If an image cannot be opened (e.g., due to corruption or unsupported format), it is excluded from the dataset.
 
@@ -273,10 +292,10 @@ class ImageFolderDataset:
                 cleaned_files.append(img_name)
             except:
                 print(f"Skipping {img_name} due to error")
-                
+
         # Update the list of image files with only the cleaned files
         self.image_files = cleaned_files
-    
+
     def __len__(self):
         """
         Returns the number of valid images in the dataset after cleaning.
@@ -296,12 +315,12 @@ class ImageFolderDataset:
         ----------
         idx : int
             The index of the image to retrieve.
-        
+
         Returns:
         -------
         tuple
             A tuple containing the image filename and the preprocessed image as a NumPy array or Tensor.
-        
+
         Raises:
         ------
         IndexError
@@ -315,12 +334,20 @@ class ImageFolderDataset:
         # Return the image filename and the preprocessed image
         return img_name, img
 
-def get_embeddings_df(batch_size=32, path="data/images", dataset_name='', backbone="resnet50", directory='Embeddings', image_files=None):
+
+def get_embeddings_df(
+    batch_size=32,
+    path="data/images",
+    dataset_name="",
+    backbone="resnet50",
+    directory="Embeddings",
+    image_files=None,
+):
     """
     Generates embeddings for images in a dataset using a specified backbone model and saves them to a CSV file.
-    
-    This function processes images from a given folder in batches, extracts features (embeddings) using a specified 
-    pre-trained computer vision model, and stores the results in a CSV file. The embeddings can be used for 
+
+    This function processes images from a given folder in batches, extracts features (embeddings) using a specified
+    pre-trained computer vision model, and stores the results in a CSV file. The embeddings can be used for
     downstream tasks such as image retrieval or clustering.
 
     Parameters:
@@ -337,7 +364,7 @@ def get_embeddings_df(batch_size=32, path="data/images", dataset_name='', backbo
     directory : str, optional
         The root directory where the embeddings CSV file will be saved. Default is 'Embeddings'.
     image_files : list, optional
-        A pre-defined list of image file names to process. If not provided, the function will automatically detect 
+        A pre-defined list of image file names to process. If not provided, the function will automatically detect
         image files in the `path` directory.
 
     Returns:
@@ -348,7 +375,7 @@ def get_embeddings_df(batch_size=32, path="data/images", dataset_name='', backbo
     Side Effects:
     ------------
     - Saves a CSV file in the specified directory containing image file names and their corresponding embeddings.
-    
+
     Notes:
     ------
     - The images are loaded and preprocessed using the `ImageFolderDataset` class.
@@ -356,55 +383,56 @@ def get_embeddings_df(batch_size=32, path="data/images", dataset_name='', backbo
     - The embeddings are saved as a CSV file with the following structure:
         - `ImageName`: The name of the image file.
         - Columns corresponding to the embedding vector (one column per feature).
-    
+
     Example:
     --------
     >>> get_embeddings_df(batch_size=16, path="data/images", dataset_name='sample_dataset', backbone="resnet50")
-    
+
     This would generate a CSV file with image embeddings from the 'resnet50' backbone model for images in the "data/images" directory.
     """
-    
+
     # Create an instance of the ImageFolderDataset class
     dataset = ImageFolderDataset(folder_path=path, image_files=image_files)
     # Create an instance of the FoundationalCVModel class
     model = FoundationalCVModel(backbone)
-    
+
     img_names = []
     features = []
     # Calculate the number of batches based on the dataset size and batch size
-    num_batches = len(dataset) // batch_size + (1 if len(dataset) % batch_size != 0 else 0)
-    
+    num_batches = len(dataset) // batch_size + (
+        1 if len(dataset) % batch_size != 0 else 0
+    )
+
     # Process images in batches and extract features
     for i in range(0, len(dataset), batch_size):
         # Get the image files and images for the current batch
-        batch_files = dataset.image_files[i:i + batch_size]
-        batch_imgs = np.array([dataset[j][1] for j in range(i, min(i + batch_size, len(dataset)))])
-        
+        batch_files = dataset.image_files[i : i + batch_size]
+        batch_imgs = np.array(
+            [dataset[j][1] for j in range(i, min(i + batch_size, len(dataset)))]
+        )
+
         # Generate embeddings for the batch of images
         batch_features = model.predict(batch_imgs)
-        
+
         # Append the image names and features to the lists
         img_names.extend(batch_files)
         features.extend(batch_features)
-        
+
         if (i // batch_size + 1) % 10 == 0:
             print(f"Batch {i // batch_size + 1}/{num_batches} done")
-    
+
     # Create a DataFrame with the image names and embeddings
-    df = pd.DataFrame({
-        'ImageName': img_names,
-        'Embeddings': features
-    })
-    
+    df = pd.DataFrame({"ImageName": img_names, "Embeddings": features})
+
     # Split the embeddings into separate columns
-    df_aux = pd.DataFrame(df['Embeddings'].tolist())
-    df = pd.concat([df['ImageName'], df_aux], axis=1)
-    
+    df_aux = pd.DataFrame(df["Embeddings"].tolist())
+    df = pd.concat([df["ImageName"], df_aux], axis=1)
+
     # Save the DataFrame to a CSV file
     if not os.path.exists(directory):
         os.makedirs(directory)
-    
-    if not os.path.exists(f'{directory}/{dataset_name}'):
-        os.makedirs(f'{directory}/{dataset_name}')
-        
-    df.to_csv(f'{directory}/{dataset_name}/Embeddings_{backbone}.csv', index=False)
+
+    if not os.path.exists(f"{directory}/{dataset_name}"):
+        os.makedirs(f"{directory}/{dataset_name}")
+
+    df.to_csv(f"{directory}/{dataset_name}/Embeddings_{backbone}.csv", index=False)
