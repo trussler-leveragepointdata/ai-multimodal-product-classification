@@ -8,7 +8,6 @@ from tensorflow.keras.applications import (
     DenseNet121,
     DenseNet169,
     InceptionV3,
-    ConvNeXtTiny,
 )
 from tensorflow.keras.layers import Input
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
